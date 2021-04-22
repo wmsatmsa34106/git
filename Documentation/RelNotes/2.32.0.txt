@@ -47,6 +47,36 @@ UI, Workflows & Features
 
  * "git send-email" learned to honor the core.hooksPath configuration.
 
+ * "git format-patch -v<n>" learned to allow a reroll count that is
+   not an integer.
+
+ * "git commit" learned "--trailer <key>[=<value>]" option; together
+   with the interpret-trailers command, this will make it easier to
+   support custom trailers.
+
+ * "git clone --reject-shallow" option fails the clone as soon as we
+   notice that we are cloning from a shallow repository.
+
+ * A configuration variable has been added to force tips of certain
+   refs to be given a reachability bitmap.
+
+ * "gitweb" learned "e-mail privacy" feature to redact strings that
+   look like e-mail addresses on various pages.
+
+ * "git apply --3way" has always been "to fall back to 3-way merge
+   only when straight application fails". Swap the order of falling
+   back so that 3-way is always attempted first (only when the option
+   is given, of course) and then straight patch application is used as
+   a fallback when it fails.
+
+ * "git apply" now takes "--3way" and "--cached" at the same time, and
+   work and record results only in the index.
+
+ * The command line completion (in contrib/) has learned that
+   CHERRY_PICK_HEAD is a possible pseudo-ref.
+
+ * Userdiff patterns for "Scheme" has been added.
+
 
 Performance, Internal Implementation, Development Support etc.
 
@@ -65,6 +95,41 @@ Performance, Internal Implementation, Development Support etc.
  * Reorganize Makefile to allow building git.o and other essential
    objects without extra stuff needed only for testing.
 
+ * Preparatory API changes for parallel checkout.
+
+ * A simple IPC interface gets introduced to build services like
+   fsmonitor on top.
+
+ * Fsck API clean-up.
+
+ * SECURITY.md that is facing individual contributors and end users
+   has been introduced.  Also a procedure to follow when preparing
+   embargoed releases has been spelled out.
+   (merge 09420b7648 js/security-md later to maint).
+
+ * Optimize "rev-list --use-bitmap-index --objects" corner case that
+   uses negative tags as the stopping points.
+
+ * CMake update for vsbuild.
+
+ * An on-disk reverse-index to map the in-pack location of an object
+   back to its object name across multiple packfiles is introduced.
+
+ * Generate [ec]tags under $(QUIET_GEN).
+
+ * Clean-up codepaths that implements "git send-email --validate"
+   option and improves the message from it.
+
+ * The last remnant of gettext-poison has been removed.
+
+ * The test framework has been taught to optionally turn the default
+   merge strategy to "ort" throughout the system where we use
+   three-way merges internally, like cherry-pick, rebase etc.,
+   primarily to enhance its test coverage (the strategy has been
+   available as an explicit "-s ort" choice).
+
+ * A bit of code clean-up and a lot of test clean-up around userdiff
+   area.
 
 
 Fixes since v2.31
@@ -120,6 +185,51 @@ Fixes since v2.31
    symbolic links, which has been corrected.
    (merge fab78a0c3d mt/checkout-remove-nofollow later to maint).
 
+ * A few option description strings started with capital letters,
+   which were corrected.
+   (merge 5ee90326dc cc/downcase-opt-help later to maint).
+
+ * Plug or annotate remaining leaks that trigger while running the
+   very basic set of tests.
+   (merge 68ffe095a2 ah/plugleaks later to maint).
+
+ * The hashwrite() API uses a buffering mechanism to avoid calling
+   write(2) too frequently. This logic has been refactored to be
+   easier to understand.
+   (merge ddaf1f62e3 ds/clarify-hashwrite later to maint).
+
+ * "git cherry-pick/revert" with or without "--[no-]edit" did not spawn
+   the editor as expected (e.g. "revert --no-edit" after a conflict
+   still asked to edit the message), which has been corrected.
+   (merge 39edfd5cbc en/sequencer-edit-upon-conflict-fix later to maint).
+
+ * "git daemon" has been tightened against systems that take backslash
+   as directory separator.
+   (merge 9a7f1ce8b7 rs/daemon-sanitize-dir-sep later to maint).
+
+ * A NULL-dereference bug has been corrected in an error codepath in
+   "git for-each-ref", "git branch --list" etc.
+   (merge c685450880 jk/ref-filter-segfault-fix later to maint).
+
+ * Streamline the codepath to fix the UTF-8 encoding issues in the
+   argv[] and the prefix on macOS.
+   (merge c7d0e61016 tb/precompose-prefix-simplify later to maint).
+
+ * The command-line completion script (in contrib/) had a couple of
+   references that would have given a warning under the "-u" (nounset)
+   option.
+   (merge c5c0548d79 vs/completion-with-set-u later to maint).
+
+ * When "git pack-objects" makes a literal copy of a part of existing
+   packfile using the reachability bitmaps, its update to the progress
+   meter was broken.
+   (merge 8e118e8490 jk/pack-objects-bitmap-progress-fix later to maint).
+
+ * The dependencies for config-list.h and command-list.h were broken
+   when the former was split out of the latter, which has been
+   corrected.
+   (merge 56550ea718 sg/bugreport-fixes later to maint).
+
  * Other code cleanup, docfix, build fix, etc.
    (merge f451960708 dl/cat-file-doc-cleanup later to maint).
    (merge 12604a8d0c sv/t9801-test-path-is-file-cleanup later to maint).
@@ -132,3 +242,9 @@ Fixes since v2.31
    (merge 2be927f3d1 ab/diff-no-index-tests later to maint).
    (merge 76593c09bb ab/detox-gettext-tests later to maint).
    (merge 28e29ee38b jc/doc-format-patch-clarify later to maint).
+   (merge fc12b6fdde fm/user-manual-use-preface later to maint).
+   (merge dba94e3a85 cc/test-helper-bloom-usage-fix later to maint).
+   (merge 61a7660516 hn/reftable-tables-doc-update later to maint).
+   (merge 81ed96a9b2 jt/fetch-pack-request-fix later to maint).
+   (merge 151b6c2dd7 jc/doc-do-not-capitalize-clarification later to maint).
+   (merge 9160068ac6 js/access-nul-emulation-on-windows later to maint).

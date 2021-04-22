@@ -1,5 +1,31 @@
 # Security Policy
 
+## Reporting a vulnerability
+
+Please send a detailed mail to git-security@googlegroups.com to
+report vulnerabilities in Git.
+
+Even when unsure whether the bug in question is an exploitable
+vulnerability, it is recommended to send the report to
+git-security@googlegroups.com (and obviously not to discuss the
+issue anywhere else).
+
+Vulnerabilities are expected to be discussed _only_ on that
+list, and not in public, until the official announcement on the
+Git mailing list on the release date.
+
+Examples for details to include:
+
+- Ideally a short description (or a script) to demonstrate an
+  exploit.
+- The affected platforms and scenarios (the vulnerability might
+  only affect setups with case-sensitive file systems, for
+  example).
+- The name and affiliation of the security researchers who are
+  involved in the discovery, if any.
+- Whether the vulnerability has already been disclosed.
+- How long an embargo would be required to be safe.
+
 ## Supported Versions
 
 Git for Windows is a "friendly fork" of [Git](https://git-scm.com/), i.e. changes in Git for Windows are frequently contributed back, and Git for Windows' release cycle closely following Git's.
@@ -41,7 +67,3 @@ The [gitforwindows/git repository](https://github.com/git-for-windows/git) also 
 # Other special branches
 
 Currently, there is only one other special-purpose branch in Git for Windows: the `vs/master` branch. It adds a commit on top of git-for-Windows/git's `master`, providing the project files ready to build Git in Visual Studio using the MSVC tool chain, [also updated via automated builds](https://dev.azure.com/git-for-windows/git/_build?definitionId=27).
-
-## Reporting a Vulnerability
-
-Please send a mail to git-security@googlegroups.com when you found a security issue in Git or in Git for Windows, even when you are not 100% certain that it is _actually_ a security issue. Typically, you will receive an answer within a day or even within a few hours.

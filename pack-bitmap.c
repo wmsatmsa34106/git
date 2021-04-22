@@ -13,6 +13,7 @@
 #include "repository.h"
 #include "object-store.h"
 #include "list-objects-filter-options.h"
+#include "config.h"
 
 /*
  * An entry on the bitmap index, representing the bitmap for a given
@@ -997,6 +998,7 @@ struct bitmap_index *prepare_bitmap_walk(struct rev_info *revs,
 				object_list_insert(object, &wants);
 
 			object = parse_object_or_die(get_tagged_oid(tag), NULL);
+			object->flags |= (tag->object.flags & UNINTERESTING);
 		}
 
 		if (object->flags & UNINTERESTING)
@@ -1350,6 +1352,24 @@ void test_bitmap_walk(struct rev_info *revs)
 	free_bitmap_index(bitmap_git);
 }
 
+int test_bitmap_commits(struct repository *r)
+{
+	struct bitmap_index *bitmap_git = prepare_bitmap_git(r);
+	struct object_id oid;
+	MAYBE_UNUSED void *value;
+
+	if (!bitmap_git)
+		die("failed to load bitmap indexes");
+
+	kh_foreach(bitmap_git->bitmaps, oid, value, {
+		printf("%s\n", oid_to_hex(&oid));
+	});
+
+	free_bitmap_index(bitmap_git);
+
+	return 0;
+}
+
 int rebuild_bitmap(const uint32_t *reposition,
 		   struct ewah_bitmap *source,
 		   struct bitmap *dest)
@@ -1510,4 +1530,9 @@ off_t get_disk_usage_from_bitmap(struct bitmap_index *bitmap_git,
 	total += get_disk_usage_for_extended(bitmap_git);
 
 	return total;
+}
+
+const struct string_list *bitmap_preferred_tips(struct repository *r)
+{
+	return repo_config_get_value_multi(r, "pack.preferbitmaptips");
 }

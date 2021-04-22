@@ -30,15 +30,14 @@ static int is_another_server_alive(const char *path,
 	return 0;
 }
 
-int unix_stream_server__create(
-	const char *path,
-	const struct unix_stream_listen_opts *opts,
-	long timeout_ms,
-	struct unix_stream_server_socket **new_server_socket)
+int unix_ss_create(const char *path,
+		   const struct unix_stream_listen_opts *opts,
+		   long timeout_ms,
+		   struct unix_ss_socket **new_server_socket)
 {
 	struct lock_file lock = LOCK_INIT;
 	int fd_socket;
-	struct unix_stream_server_socket *server_socket;
+	struct unix_ss_socket *server_socket;
 
 	*new_server_socket = NULL;
 
@@ -89,14 +88,13 @@ int unix_stream_server__create(
 	return 0;
 }
 
-void unix_stream_server__free(
-	struct unix_stream_server_socket *server_socket)
+void unix_ss_free(struct unix_ss_socket *server_socket)
 {
 	if (!server_socket)
 		return;
 
 	if (server_socket->fd_socket >= 0) {
-		if (!unix_stream_server__was_stolen(server_socket))
+		if (!unix_ss_was_stolen(server_socket))
 			unlink(server_socket->path_socket);
 		close(server_socket->fd_socket);
 	}
@@ -105,8 +103,7 @@ void unix_stream_server__free(
 	free(server_socket);
 }
 
-int unix_stream_server__was_stolen(
-	struct unix_stream_server_socket *server_socket)
+int unix_ss_was_stolen(struct unix_ss_socket *server_socket)
 {
 	struct stat st_now;
 

@@ -208,9 +208,10 @@ static int packet_write_gently(const int fd_out, const char *buf, size_t size)
 	set_packet_header(header, packet_size);
 
 	/*
-	 * Write the header and the buffer in 2 parts so that we do not need
-	 * to allocate a buffer or rely on a static buffer.  This avoids perf
-	 * and multi-threading issues.
+	 * Write the header and the buffer in 2 parts so that we do
+	 * not need to allocate a buffer or rely on a static buffer.
+	 * This also avoids putting a large buffer on the stack which
+	 * might have multi-threading issues.
 	 */
 
 	if (write_in_full(fd_out, header, 4) < 0 ||

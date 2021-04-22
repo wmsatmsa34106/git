@@ -38,6 +38,7 @@ static int server_supports_filtering;
 static int advertise_sid;
 static struct shallow_lock shallow_lock;
 static const char *alternate_shallow_file;
+static struct fsck_options fsck_options = FSCK_OPTIONS_MISSING_GITMODULES;
 static struct strbuf fsck_msg_types = STRBUF_INIT;
 static struct string_list uri_protocols = STRING_LIST_INIT_DUP;
 
@@ -989,22 +990,6 @@ static int cmp_ref_by_name(const void *a_, const void *b_)
 	return strcmp(a->name, b->name);
 }
 
-static void fsck_gitmodules_oids(struct oidset *gitmodules_oids)
-{
-	struct oidset_iter iter;
-	const struct object_id *oid;
-	struct fsck_options fo = FSCK_OPTIONS_STRICT;
-
-	if (!oidset_size(gitmodules_oids))
-		return;
-
-	oidset_iter_init(gitmodules_oids, &iter);
-	while ((oid = oidset_iter_next(&iter)))
-		register_found_gitmodules(oid);
-	if (fsck_finish(&fo))
-		die("fsck failed");
-}
-
 static struct ref *do_fetch_pack(struct fetch_pack_args *args,
 				 int fd[2],
 				 const struct ref *orig_ref,
@@ -1019,7 +1004,6 @@ static struct ref *do_fetch_pack(struct fetch_pack_args *args,
 	int agent_len;
 	struct fetch_negotiator negotiator_alloc;
 	struct fetch_negotiator *negotiator;
-	struct oidset gitmodules_oids = OIDSET_INIT;
 
 	negotiator = &negotiator_alloc;
 	fetch_negotiator_init(r, negotiator);
@@ -1131,14 +1115,17 @@ static struct ref *do_fetch_pack(struct fetch_pack_args *args,
 	if (args->deepen)
 		setup_alternate_shallow(&shallow_lock, &alternate_shallow_file,
 					NULL);
-	else if (si->nr_ours || si->nr_theirs)
+	else if (si->nr_ours || si->nr_theirs) {
+		if (args->reject_shallow_remote)
+			die(_("source repository is shallow, reject to clone."));
 		alternate_shallow_file = setup_temporary_shallow(si->shallow);
-	else
+	} else
 		alternate_shallow_file = NULL;
 	if (get_pack(args, fd, pack_lockfiles, NULL, sought, nr_sought,
-		     &gitmodules_oids))
+		     &fsck_options.gitmodules_found))
 		die(_("git fetch-pack: fetch failed."));
-	fsck_gitmodules_oids(&gitmodules_oids);
+	if (fsck_finish(&fsck_options))
+		die("fsck failed");
 
  all_done:
 	if (negotiator)
@@ -1266,7 +1253,7 @@ static int send_fetch_request(struct fetch_negotiator *negotiator, int fd_out,
 		if (hash_algo_by_ptr(the_hash_algo) != hash_algo)
 			die(_("mismatched algorithms: client %s; server %s"),
 			    the_hash_algo->name, hash_name);
-		packet_write_fmt(fd_out, "object-format=%s", the_hash_algo->name);
+		packet_buf_write(&req_buf, "object-format=%s", the_hash_algo->name);
 	} else if (hash_algo_by_ptr(the_hash_algo) != GIT_HASH_SHA1) {
 		die(_("the server does not support algorithm '%s'"),
 		    the_hash_algo->name);
@@ -1500,10 +1487,12 @@ static void receive_shallow_info(struct fetch_pack_args *args,
 		 * rejected (unless --update-shallow is set); do the same.
 		 */
 		prepare_shallow_info(si, shallows);
-		if (si->nr_ours || si->nr_theirs)
+		if (si->nr_ours || si->nr_theirs) {
+			if (args->reject_shallow_remote)
+				die(_("source repository is shallow, reject to clone."));
 			alternate_shallow_file =
 				setup_temporary_shallow(si->shallow);
-		else
+		} else
 			alternate_shallow_file = NULL;
 	} else {
 		alternate_shallow_file = NULL;
@@ -1589,7 +1578,6 @@ static struct ref *do_fetch_pack_v2(struct fetch_pack_args *args,
 	struct string_list packfile_uris = STRING_LIST_INIT_DUP;
 	int i;
 	struct strvec index_pack_args = STRVEC_INIT;
-	struct oidset gitmodules_oids = OIDSET_INIT;
 
 	negotiator = &negotiator_alloc;
 	fetch_negotiator_init(r, negotiator);
@@ -1680,7 +1668,7 @@ static struct ref *do_fetch_pack_v2(struct fetch_pack_args *args,
 			process_section_header(&reader, "packfile", 0);
 			if (get_pack(args, fd, pack_lockfiles,
 				     packfile_uris.nr ? &index_pack_args : NULL,
-				     sought, nr_sought, &gitmodules_oids))
+				     sought, nr_sought, &fsck_options.gitmodules_found))
 				die(_("git fetch-pack: fetch failed."));
 			do_check_stateless_delimiter(args, &reader);
 
@@ -1723,7 +1711,7 @@ static struct ref *do_fetch_pack_v2(struct fetch_pack_args *args,
 
 		packname[the_hash_algo->hexsz] = '\0';
 
-		parse_gitmodules_oids(cmd.out, &gitmodules_oids);
+		parse_gitmodules_oids(cmd.out, &fsck_options.gitmodules_found);
 
 		close(cmd.out);
 
@@ -1744,7 +1732,8 @@ static struct ref *do_fetch_pack_v2(struct fetch_pack_args *args,
 	string_list_clear(&packfile_uris, 0);
 	strvec_clear(&index_pack_args);
 
-	fsck_gitmodules_oids(&gitmodules_oids);
+	if (fsck_finish(&fsck_options))
+		die("fsck failed");
 
 	if (negotiator)
 		negotiator->release(negotiator);
